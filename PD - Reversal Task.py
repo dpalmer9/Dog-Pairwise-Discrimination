@@ -145,7 +145,7 @@ class Experiment_Staging(FloatLayout):
     def initiation_detected(self,*args):
         self.remove_widget(self.initiation_image_wid) # Remove Initaition Button
         #self.delay_hold_button.bind(on_release= self.premature_response) ## Disable Path for Dog
-        self.add_widget(self.delay_hold_button) # Replace with Delay Interval Button
+        #self.add_widget(self.delay_hold_button) # Replace with Delay Interval Button
         self.presentation_delay() # Start Presentation Delay
 
     def presentation_delay(self,*args):
@@ -162,7 +162,6 @@ class Experiment_Staging(FloatLayout):
     def image_presentation(self,*args):
         if self.image_on_screen == False: #Ensure one pass
             self.delay_hold_button.unbind(on_release=self.premature_response) #Remove Function Call
-            self.remove_widget(self.delay_hold_button) # Remove Delay Button
 
             self.correct_image_wid = ImageButton(source='%s\\Images\\%s.png' % (self.curr_dir,self.image_list[self.correct_image_index]), allow_stretch=True)
             self.correct_image_wid.size_hint = (.5, .5)
@@ -276,6 +275,7 @@ class Experiment_Staging(FloatLayout):
         #self.delay_hold_button.bind(on_release=self.premature_response) # Disable for now
         self.iti_clock_trigger = False # Set Flag
         self.image_on_screen = False # Set Flag
+        self.remove_widget(self.delay_hold_button)  # Remove Delay Button
         self.end_iti() # Start end_iti() function
 
     def end_iti(self,*args):
