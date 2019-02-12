@@ -44,7 +44,7 @@ class Experiment_Staging(FloatLayout):
 
         self.delay_length = 10
 
-        self.max_trials = 72 # MAX Number of Trials / Session
+        self.max_trials = 30 # MAX Number of Trials / Session
         self.max_time = 3600 # Cutoff Time / Session (sec)
 
         self.time_elapsed = 0 # How long has elapsed during the protocol
@@ -77,14 +77,20 @@ class Experiment_Staging(FloatLayout):
         self.current_correct = 0 # Is current trial a correct one?
         self.current_correction = 0 # Is current trial requiring correction?
 
+        self.total_trials = 0
+        self.total_correct = 0
+        self.total_corrections = 0
+        self.correct_latency_list = []
+        self.incorrect_latency_list = []
+
         self.correct_sound_path = self.curr_dir + "\\Sounds\\Correct.wav" # Filepath to Correct Sound
         self.incorrect_sound_path = self.curr_dir + "\\Sounds\\Incorrect.wav" # Filepath to Incorrect Sound
         self.feedback_sound = SoundLoader.load(self.correct_sound_path) # Loads sound to placeholder
         self.feedback_sound.loop = True # Set Sound-Repeating Function
 
         self.delay_hold_button = ImageButton(source='%s\\Images\\white.png' % (self.curr_dir), allow_stretch=True) # Set Delay Button Filepath
-        self.delay_hold_button.size_hint = (.25,.25) # Set Delay Button Size (relative to screen size)
-        self.delay_hold_button.pos = ((self.center_x - (0.125 * self.monitor_x_dim)),(self.center_y - (0.125 * self.monitor_y_dim) - (0.4 * self.monitor_y_dim))) # Set Relative Position of Delay Button
+        self.delay_hold_button.size_hint = (.5,.5) # Set Delay Button Size (relative to screen size)
+        self.delay_hold_button.pos = ((self.center_x - (0.25 * self.monitor_x_dim)),(self.center_y - (0.25 * self.monitor_y_dim) - (0.1 * self.monitor_y_dim))) # Set Relative Position of Delay Button
 
 
         Clock.schedule_interval(self.clock_update, 0.001) # Run Timer Function Every 1000th of a second (Precision)
@@ -93,28 +99,21 @@ class Experiment_Staging(FloatLayout):
 
 
     def id_entry(self):
-        self.id_instruction = Label(text = 'Please enter a participant ID #:') # Text Label
-        self.id_instruction.size_hint = (.5,.2) #Label Size Relative to Screen
-        self.id_instruction.pos = ((self.center_x - (0.25 * self.monitor_x_dim)),(self.center_y - (0.1*self.monitor_y_dim) + (0.3*self.monitor_y_dim)))
-        # Label Position Relative to Screen
-        self.id_entry = TextInput(text='', multiline=False) #Input Field
-        self.id_entry.size_hint = (.3,.1) #Input Fieled Size
-        self.id_entry.pos = ((self.center_x - (0.15 * self.monitor_x_dim)),(self.center_y - (0.05*self.monitor_y_dim) + (-0.3*self.monitor_y_dim)))
-        # Input Field Position
 
+        self.current_time = datetime.datetime.now()
+        self.string_time = self.current_time.strftime('%Y - %m - %d %H%M')
+        self.current_task = 'PD - Must Touch - '
+        self.id_no = self.current_task + self.string_time
         self.id_button = Button(text='OK') # OK Buttom Initialization
         self.id_button.size_hint = (.1,.1) # OK Button Size Relative to Screen
         self.id_button.pos = ((self.center_x - (0.05 * self.monitor_x_dim)),(self.center_y - (0.05*self.monitor_y_dim) + (-0.4*self.monitor_y_dim)))
         # OK Button Position Relative to Screen
         self.id_button.bind(on_press = self.clear_id) # Bind function self.clear_id() to button press
 
-        self.add_widget(self.id_instruction) # Put Label on Screen
-        self.add_widget(self.id_entry) # Put Entry Field on Screen
+
         self.add_widget(self.id_button) # Put OK Button on Screen
 
     def clear_id(self,*args):
-        self.id_no = self.id_entry.text # Filename moved to string variable
-        self.id_entry.hide_keyboard() #If keyboard is present, force its removal
 
         self.participant_data_path = self.data_dir + '\\%s.csv' % (self.id_no) # Create Filepath for Data
         self.data_col_names = 'TrialNo,Correct,Correction Trial,Response Latency' #Set Column Names
@@ -122,16 +121,12 @@ class Experiment_Staging(FloatLayout):
         self.data_file.write(self.data_col_names) # Write column names to file
         self.data_file.close() #Close editing of file - ESSENTIAL
 
-        self.remove_widget(self.id_instruction) # Remove Instructions
-        self.remove_widget(self.id_entry) # Remove text-box
         self.remove_widget(self.id_button) # Remove Ok Button
         self.trial_initiation() # Start Trial Initiation
-
-
     def trial_initiation(self):
         self.initiation_image_wid = ImageButton(source='%s\\Images\\white.png' % (self.curr_dir), allow_stretch=True) # Initiation Button Filepath
-        self.initiation_image_wid.size_hint = (.25,.25) #Initiation Button Size Relative to Screen
-        self.initiation_image_wid.pos = ((self.center_x - (0.125 * self.monitor_x_dim)),(self.center_y - (0.125 * self.monitor_y_dim) - (0.4 * self.monitor_y_dim)))
+        self.initiation_image_wid.size_hint = (.5,.5) #Initiation Button Size Relative to Screen
+        self.initiation_image_wid.pos = ((self.center_x - (0.25 * self.monitor_x_dim)),(self.center_y - (0.25 * self.monitor_y_dim) - (0.1 * self.monitor_y_dim)))
         #Initiation Button Position Relative to Screen
         self.initiation_image_wid.bind(on_press= self.initiation_detected) #Bind self.initiation_detected() to press
         self.add_widget(self.initiation_image_wid) # Create Button
@@ -288,14 +283,33 @@ class Experiment_Staging(FloatLayout):
             Clock.unschedule(self.end_iti) # Stop Repeat
 
             if self.current_trial > self.max_trials: #If current trial is greater than max, stop
-                Experiment_App.stop()
+                self.final_progress_write()
 
             if self.time_elapsed < self.max_time: # If Time is below max, continue
                 self.image_presentation()
             elif self.time_elapsed >= self.max_time: # If Time is above or equal to max, stop
-                Experiment_App.stop()
+                self.final_progress_write()
 
+    def final_progress_write(self):
+        self.total_correct = self.total_correct
+        self.total_trials = self.total_trials
+        self.total_corrections = self.total_corrections
 
+        self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
+        self.mean_incorrect_latency = sum(self.incorrect_latency_list) / len(self.incorrect_latency_list)
+        self.accuracy = (self.total_correct / self.total_trials) * 100
+
+        self.current_date = self.current_time.strftime('%Y/%m/%d %H:%M')
+
+        self.write_string = '%s,%s,%s,%s,%s,%s,%s,%s' % (self.current_task,self.current_date,self.time_elapsed,self.total_trials,
+                                             self.accuracy,self.total_corrections,self.mean_correct_latency,
+                                             self.mean_incorrect_latency)
+        self.summary_path = self.data_dir + '\\dPD Progress Summary.csv'
+        self.summary_file = open(self.summary_path,'a')
+        self.summary_file.write("\n")
+        self.summary_file.write(self.write_string)
+        self.summary_file.close()
+        Experiment_App.stop()
 
     def clock_update(self,*args):
         self.current_time = time.time()

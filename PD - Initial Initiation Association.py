@@ -55,6 +55,7 @@ class Experiment_Staging(FloatLayout):
         self.iti_time = 8 # Delay time between trials
         self.presentation_delay_time = 10 # Amount of time between start and presentation (Trial # 1)
         self.feedback_length = 2 # Amount of time Sound/Cue are Present
+        self.stimulus_duration = 30
 
 
         self.image_list = list(range(1,51)) # Names of Files - Numbers 1-50 #
@@ -103,7 +104,7 @@ class Experiment_Staging(FloatLayout):
 
         self.current_time = datetime.datetime.now()
         self.string_time = self.current_time.strftime('%Y - %m - %d %H%M')
-        self.current_task = 'PD - Must Initiate - '
+        self.current_task = 'PD - Initial Touch - '
         self.id_no = self.current_task + self.string_time
         self.id_button = Button(text='OK') # OK Buttom Initialization
         self.id_button.size_hint = (.1,.1) # OK Button Size Relative to Screen
@@ -131,15 +132,17 @@ class Experiment_Staging(FloatLayout):
         self.initiation_image_wid.size_hint = (.5,.5) #Initiation Button Size Relative to Screen
         self.initiation_image_wid.pos = ((self.center_x - (0.25 * self.monitor_x_dim)),(self.center_y - (0.25 * self.monitor_y_dim) - (0.1 * self.monitor_y_dim)))
         #Initiation Button Position Relative to Screen
-        self.initiation_image_wid.bind(on_press= self.initiation_detected) #Bind self.initiation_detected() to press
         self.add_widget(self.initiation_image_wid) # Create Button
         self.initiation_start_time = time.time() # Set Start of Initiation
+        self.initiation_detected()
 
     def initiation_detected(self,*args):
         self.remove_widget(self.initiation_image_wid) # Remove Initaition Button
+        self.add_widget(self.delay_hold_button)
+        self.image_pres_time = time.time()
         #self.delay_hold_button.bind(on_release= self.premature_response) ## Disable Path for Dog
         #self.add_widget(self.delay_hold_button) # Replace with Delay Interval Button
-        self.presentation_delay() # Start Presentation Delay
+        self.image_presentation() #Start Presentation Delay
 
     def presentation_delay(self,*args):
         if self.presentation_delay_start == False: # check if first pass
@@ -157,30 +160,12 @@ class Experiment_Staging(FloatLayout):
             self.delay_hold_button.unbind(on_release=self.premature_response) #Remove Function Call
             #self.remove_widget(self.delay_hold_button) # Remove Delay Button
 
-            self.correct_image_wid = ImageButton(source='%s\\Images\\%s.png' % (self.curr_dir,self.image_list[self.correct_image_index]), allow_stretch=True)
-            self.correct_image_wid.size_hint = (.5, .5)
-            self.correct_image_wid.pos = (
-            (self.center_x - (0.25 * self.monitor_x_dim) + (0.25 * self.image_pos[self.correct_image_pos] * self.monitor_x_dim)), (self.center_y - (0.25 * self.monitor_y_dim)))
-            self.correct_image_wid.bind(on_press= self.response_correct)
-            self.add_widget(self.correct_image_wid)
-            # Create Correct Image (filepath,size,position,binding,activating)
-
-            self.incorrect_image_wid = ImageButton(source='%s\\Images\\black.png' % (self.curr_dir), allow_stretch=True)
-            self.incorrect_image_wid.size_hint = (.5, .5)
-            self.incorrect_image_wid.pos = (
-            (self.center_x - (0.25 * self.monitor_x_dim) + (0.25 * self.image_pos[self.incorrect_image_pos] * self.monitor_x_dim)), (self.center_y - (0.25 * self.monitor_y_dim)))
-            self.add_widget(self.incorrect_image_wid)
-            # Create Incorrect Image (filepath,size,position,binding,activating)
-
-
-            self.image_pres_time = time.time() # Start time for image presentation
-            self.image_on_screen = True # Change Flag
+            Clock.schedule_interval(self.image_presentation,0.01)
+        if ((self.current_time - self.image_pres_time) >= self.stimulus_duration):
+            self.response_correct()
 
     def response_correct(self, *args):
         self.image_touch_time = time.time() # End Time
-        self.remove_widget(self.correct_image_wid) # Remove Correct
-        self.remove_widget(self.incorrect_image_wid) # Remove Incorrect
-
         self.lat = self.image_touch_time - self.image_pres_time #Time to hit screen
 
         self.current_correct = 1 # Set trial state to correct
@@ -190,13 +175,12 @@ class Experiment_Staging(FloatLayout):
         self.record_data() # Activate Data Recorder
         self.set_new_trial_configuration() # Get New Trial Parameters
         self.feedback_report() # Activate Feedback System
-        self.delay_hold_button.bind(on_press=self.start_iti) # Activate ITI Call
-        self.add_widget(self.delay_hold_button) # Present Button
+        #self.delay_hold_button.bind(on_press=self.start_iti) # Activate ITI Call
+        #self.add_widget(self.delay_hold_button) # Present Button
+        self.start_iti()
 
     def response_incorrect(self, *args):
         self.image_touch_time = time.time() # Get End Time
-        self.remove_widget(self.correct_image_wid) # Remove Correct
-        self.remove_widget(self.incorrect_image_wid) # Remove Incorrect
 
         self.lat = self.image_touch_time - self.image_pres_time # Get Latency to Respond
 
@@ -206,8 +190,7 @@ class Experiment_Staging(FloatLayout):
         self.current_correct = 0 # Set Flag to Incorrect
         self.record_data() # Activate Data Recorder
         self.feedback_report() # Activate Feedback System
-        self.delay_hold_button.bind(on_press=self.start_iti) # Set Delay Button Call Function
-        self.add_widget(self.delay_hold_button) # Create Delay Button
+        self.start_iti()
 
     def premature_response(self,*args):
         if self.image_on_screen == True:
@@ -264,9 +247,9 @@ class Experiment_Staging(FloatLayout):
         self.start_feedback_time = time.time()
 
     def start_iti(self,*args):
-        self.delay_hold_button.unbind(on_press=self.start_iti) # Unbind Function
+        #self.delay_hold_button.unbind(on_press=self.start_iti) # Unbind Function
         #self.delay_hold_button.bind(on_release=self.premature_response) # Disable for now
-        self.remove_widget(self.delay_hold_button)
+        #self.remove_widget(self.delay_hold_button)
         self.iti_clock_trigger = False # Set Flag
         self.image_on_screen = False # Set Flag
         self.end_iti() # Start end_iti() function
@@ -288,19 +271,21 @@ class Experiment_Staging(FloatLayout):
                 self.final_progress_write()
 
             if self.time_elapsed < self.max_time: # If Time is below max, continue
+                self.add_widget(self.delay_hold_button)
+                self.image_pres_time = time.time()
                 self.image_presentation()
             elif self.time_elapsed >= self.max_time: # If Time is above or equal to max, stop
                 self.final_progress_write()
 
 
     def final_progress_write(self):
-        self.total_correct = 'NA'
+        self.total_correct = self.total_correct
         self.total_trials = self.total_trials
         self.total_corrections = 'NA'
 
         self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
         self.mean_incorrect_latency = 'NA'
-        self.accuracy = 'NA'
+        self.accuracy = (self.total_correct / self.total_trials) * 100
 
         self.current_date = self.current_time.strftime('%Y/%m/%d %H:%M')
 
