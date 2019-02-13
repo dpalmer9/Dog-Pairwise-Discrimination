@@ -41,6 +41,7 @@ class Experiment_Staging(FloatLayout):
         self.presentation_delay_start = False
         self.image_on_screen = False
         self.feedback_displayed = False
+        self.correction_active = False
 
         self.delay_length = 10
 
@@ -100,8 +101,8 @@ class Experiment_Staging(FloatLayout):
 
     def id_entry(self):
 
-        self.current_time = datetime.datetime.now()
-        self.string_time = self.current_time.strftime('%Y - %m - %d %H%M')
+        self.current_datetime = datetime.datetime.now()
+        self.string_time = self.current_datetime.strftime('%Y - %m - %d %H%M')
         self.current_task = 'PD - Must Touch - '
         self.id_no = self.current_task + self.string_time
         self.id_button = Button(text='OK') # OK Buttom Initialization
@@ -179,6 +180,11 @@ class Experiment_Staging(FloatLayout):
         self.remove_widget(self.incorrect_image_wid) # Remove Incorrect
 
         self.lat = self.image_touch_time - self.image_pres_time #Time to hit screen
+        if self.correction_active == False:
+            self.total_trials += 1
+            self.total_correct += 1
+            self.correct_latency_list.append(self.lat)
+
 
         self.current_correct = 1 # Set trial state to correct
         self.correction_active = False # Set Correction Active to False
@@ -198,14 +204,19 @@ class Experiment_Staging(FloatLayout):
 
         self.lat = self.image_touch_time - self.image_pres_time # Get Latency to Respond
 
-        self.correction_active = True #Set Correction Trial State to Active
+        if self.correction_active == False:
+            self.total_trials += 1
+            self.incorrect_latency_list.append(self.lat)
+
         self.feedback_sound = SoundLoader.load(self.incorrect_sound_path) # Load Incorrect Soundpath
 
         self.current_correct = 0 # Set Flag to Incorrect
         self.record_data() # Activate Data Recorder
+        self.set_new_trial_configuration()
         self.feedback_report() # Activate Feedback System
-        self.delay_hold_button.bind(on_press=self.start_iti) # Set Delay Button Call Function
-        self.add_widget(self.delay_hold_button) # Create Delay Button
+        #self.delay_hold_button.bind(on_press=self.start_iti) # Set Delay Button Call Function
+        #self.add_widget(self.delay_hold_button) # Create Delay Button
+        self.start_iti()
 
     def premature_response(self,*args):
         if self.image_on_screen == True:
@@ -296,11 +307,19 @@ class Experiment_Staging(FloatLayout):
         self.total_trials = self.total_trials
         self.total_corrections = 'NA'
 
-        self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
-        self.mean_incorrect_latency = 'NA'
+        if len(self.correct_latency_list) < 1:
+            self.mean_correct_latency = 'NA'
+        else:
+            self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
+
+        if len(self.incorrect_latency_list) < 1:
+            self.mean_incorrect_latency = 'NA'
+        else:
+            self.mean_incorrect_latency = 'NA'
+
         self.accuracy = 'NA'
 
-        self.current_date = self.current_time.strftime('%Y/%m/%d %H:%M')
+        self.current_date = self.current_datetime.strftime('%Y/%m/%d %H:%M')
 
         self.write_string = '%s,%s,%s,%s,%s,%s,%s,%s' % (self.current_task,self.current_date,self.time_elapsed,self.total_trials,
                                              self.accuracy,self.total_corrections,self.mean_correct_latency,

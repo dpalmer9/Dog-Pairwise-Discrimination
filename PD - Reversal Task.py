@@ -42,6 +42,7 @@ class Experiment_Staging(FloatLayout):
         self.presentation_delay_start = False
         self.image_on_screen = False
         self.feedback_displayed = False
+        self.correction_active = False
 
         self.delay_length = 10
 
@@ -104,8 +105,8 @@ class Experiment_Staging(FloatLayout):
 
     def id_entry(self):
 
-        self.current_time = datetime.datetime.now()
-        self.string_time = self.current_time.strftime('%Y - %m - %d %H%M')
+        self.current_datetime = datetime.datetime.now()
+        self.string_time = self.current_datetime.strftime('%Y - %m - %d %H%M')
         self.current_task = 'PD - Main Task - '
         self.id_no = self.current_task + self.string_time
         self.id_button = Button(text='OK')  # OK Buttom Initialization
@@ -190,7 +191,7 @@ class Experiment_Staging(FloatLayout):
 
         if self.correction_active == False:
             self.total_trials += 1
-            self.total_correcet += 1
+            self.total_correct += 1
             self.correct_latency_list.append(self.lat)
 
 
@@ -312,11 +313,19 @@ class Experiment_Staging(FloatLayout):
         self.total_trials = self.total_trials
         self.total_corrections = self.total_corrections
 
-        self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
-        self.mean_incorrect_latency = sum(self.incorrect_latency_list) / len(self.incorrect_latency_list)
+        if len(self.correct_latency_list) < 1:
+            self.mean_correct_latency = 'NA'
+        else:
+            self.mean_correct_latency = sum(self.correct_latency_list) / len(self.correct_latency_list)
+
+        if len(self.incorrect_latency_list) < 1:
+            self.mean_incorrect_latency = 'NA'
+        else:
+            self.mean_incorrect_latency = sum(self.incorrect_latency_list) / len(self.incorrect_latency_list)
+
         self.accuracy = (self.total_correct / self.total_trials) * 100
 
-        self.current_date = self.current_time.strftime('%Y/%m/%d %H:%M')
+        self.current_date = self.current_datetime.strftime('%Y/%m/%d %H:%M')
 
         self.write_string = '%s,%s,%s,%s,%s,%s,%s,%s' % (self.current_task,self.current_date,self.time_elapsed,self.total_trials,
                                              self.accuracy,self.total_corrections,self.mean_correct_latency,
